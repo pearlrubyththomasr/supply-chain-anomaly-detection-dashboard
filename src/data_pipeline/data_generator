@@ -1,0 +1,76 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
+from src.utils.config import *
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+from src.utils.config import *
+
+np.random.seed(42)
+
+
+def generate_base_data():
+    dates = [datetime.today() - timedelta(days=i) for i in range(NUM_DAYS)]
+    dates = sorted(dates)
+
+    data = []
+
+    inventory = INITIAL_INVENTORY
+
+    for date in dates:
+        demand = max(0, int(np.random.normal(BASE_DEMAND, DEMAND_VOLATILITY)))
+        lead_time = max(1, int(np.random.normal(LEAD_TIME_MEAN, 1)))
+
+        # simple inventory logic
+        inventory = inventory - demand + np.random.randint(150, 250)
+
+        data.append({
+            "date": date,
+            "demand": demand,
+            "inventory": inventory,
+            "lead_time": lead_time,
+            "anomaly": 0,
+            "anomaly_type": None
+        })
+
+    return pd.DataFrame(data)
+
+
+def inject_anomalies(df):
+    for i in range(len(df)):
+        if np.random.rand() < ANOMALY_PROBABILITY:
+
+            anomaly_type = np.random.choice([
+                "demand_spike",
+                "inventory_shortage",
+                "delivery_delay"
+            ])
+
+            if anomaly_type == "demand_spike":
+                df.loc[i, "demand"] *= np.random.randint(2, 4)
+
+            elif anomaly_type == "inventory_shortage":
+                df.loc[i, "inventory"] = int(df.loc[i, "inventory"] * 0.2)
+
+            elif anomaly_type == "delivery_delay":
+                df.loc[i, "lead_time"] *= 3
+
+            df.loc[i, "anomaly"] = 1
+            df.loc[i, "anomaly_type"] = anomaly_type
+
+    return df
+
+
+def generate_dataset(save_path="data/supply_chain_data.csv"):
+    df = generate_base_data()
+    df = inject_anomalies(df)
+
+    df.to_csv(save_path, index=False)
+    return df
+
+
+if __name__ == "__main__":
+    df = generate_dataset()
+    print(df.head())
