@@ -1,6 +1,8 @@
 import json
 import pandas as pd
-from kafka import KafkaConsumer
+import time
+import random
+from datetime import datetime, timedelta
 from dash import Dash, html, dcc
 from dash.dependencies import Output, Input
 import plotly.express as px
@@ -10,6 +12,13 @@ from queue import Queue
 from src.llm.insights_generator import generate_insights
 from src.models.anomaly_detector import AnomalyDetector
 
+# Try to import Kafka, but fallback to mock data if not available
+try:
+    from kafka import KafkaConsumer
+    KAFKA_AVAILABLE = True
+except:
+    KAFKA_AVAILABLE = False
+
 # -----------------------------
 # GLOBAL STATE
 # -----------------------------
@@ -18,31 +27,89 @@ data_buffer = []
 MAX_BUFFER = 500
 anomaly_detector = AnomalyDetector()
 model_trained = False
+last_mock_date = datetime.now() - timedelta(hours=1)
 
 
 # -----------------------------
-# Kafka Consumer Thread
+# Mock Data Generator
+# -----------------------------
+def mock_data_generator():
+    """Generate realistic mock supply chain data"""
+    global last_mock_date
+    
+    print("🎲 Starting mock data generator...")
+    
+    while True:
+        try:
+            last_mock_date += timedelta(seconds=2)
+            
+            # Generate realistic patterns
+            base_demand = 150
+            demand_noise = random.gauss(0, 20)
+            demand_spike = 50 if random.random() < 0.1 else 0  # 10% spike chance
+            demand = max(50, base_demand + demand_noise + demand_spike)
+            
+            base_inventory = 100
+            inventory_noise = random.gauss(0, 15)
+            inventory = max(10, base_inventory + inventory_noise)
+            
+            lead_time = random.randint(1, 10)
+            
+            # Generate anomaly label
+            anomaly = 1 if abs(demand_noise + demand_spike) > 40 else 0
+            anomaly_type = "demand_spike" if demand_spike > 0 else "inventory_shortage" if inventory < 30 else "normal"
+            
+            data = {
+                "date": last_mock_date.isoformat(),
+                "demand": round(demand),
+                "inventory": round(inventory),
+                "lead_time": lead_time,
+                "anomaly": anomaly,
+                "anomaly_type": anomaly_type
+            }
+            
+            if not data_queue.full():
+                data_queue.put(data)
+                print(f"📥 Generated: {data['date'][:19]} - Demand: {data['demand']}, Inventory: {data['inventory']}")
+            
+            time.sleep(2)  # Generate data every 2 seconds
+            
+        except Exception as e:
+            print(f"⚠️  Mock data error: {e}")
+            time.sleep(5)
+
+
+# -----------------------------
+# Kafka Consumer Thread (with fallback)
 # -----------------------------
 def kafka_listener():
+    """Listen to Kafka or fall back to mock data"""
+    if not KAFKA_AVAILABLE:
+        print("⚠️  Kafka not available - using mock data instead")
+        mock_data_generator()
+        return
+        
     try:
         consumer = KafkaConsumer(
-            'supply-chain',   # change to processed later
+            'supply-chain',
             bootstrap_servers='localhost:9092',
             auto_offset_reset='latest',
             group_id='dashboard-group',
-            value_deserializer=lambda x: json.loads(x.decode('utf-8'))
+            value_deserializer=lambda x: json.loads(x.decode('utf-8')),
+            request_timeout_ms=3000
         )
 
         print("✅ Kafka connected. Listening...")
 
         for message in consumer:
             print("📥 Received:", message.value)
-
             if not data_queue.full():
                 data_queue.put(message.value)
 
     except Exception as e:
-        print("❌ Kafka Error:", e)
+        print(f"❌ Kafka Error: {e}")
+        print("⚠️  Switching to mock data...")
+        mock_data_generator()
 
 
 threading.Thread(target=kafka_listener, daemon=True).start()

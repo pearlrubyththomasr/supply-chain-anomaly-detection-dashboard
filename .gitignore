@@ -216,3 +216,105 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ============================================
+# PRIVACY & SECURITY - Sensitive Data
+# ============================================
+
+# Environment variables (with credentials, API keys, passwords)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# API keys and credentials
+.credentials
+.creds
+*.key
+*.pem
+secrets.json
+credentials.json
+client_secrets.json
+
+# Database files (may contain sensitive data)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Local configuration overrides
+config.local.py
+local_settings.py
+settings.local.py
+
+# Kafka and Docker sensitive data
+.dockercfg
+.docker/config.json
+.docker/credentials.json
+docker-compose.override.yml
+.kafka-credentials
+
+# AWS, GCP, Azure credentials
+aws-credentials.json
+~/.aws/
+google-cloud-key.json
+azure-credentials.json
+
+# SSH keys
+.ssh/
+*.pem
+*.key
+
+# Git credentials
+.git-credentials
+
+# Private data directories
+data/private/
+data/sensitive/
+data/personal/
+data/*.csv  # Optional: if CSV files contain sensitive data
+uploads/
+tmp/
+temp/
+
+# Logs that might contain sensitive info
+*.log
+logs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+*.swo
+
+# Windows
+Thumbs.db
+*.exe
+*.lnk
+
+# IDE local settings (may contain personal settings/paths)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Python IDE cache
+.vs/
+.vscode/
+.idea/
+
+# OS temp files
+*~
+.~*
+*.tmp
+*.bak
+*.swp
+
+# Package managers local cache
+.npm
+.yarn
+node_modules/
