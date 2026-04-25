@@ -1,0 +1,9 @@
+pandas
+numpy
+scikit-learn
+prophet
+plotly
+dash
+kafka-python
+requests
+python-dotenv
